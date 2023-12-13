@@ -1,0 +1,192 @@
+---
+title: "Investigating the demographic and socioeconomic traits of people in UK 2021"
+format:
+  html:
+    code-fold: true
+    code-link: true
+    embed-resources: true
+    toc: true
+    number-sections: true
+bibliography: references.bib
+---
+
+```{r}
+#| label: load-packages
+#| include: false
+
+library(tidyverse)  
+library(ggplot2)
+library(ggthemes)
+```
+
+```{r}
+#| label: load data
+#| include: false 
+data_1 <- read_csv("C:/Users/owner/Downloads/data-1.csv")
+```
+
+# Introduction
+
+The data set used for this analysis is a modified snapshot of information gathered in 2021 during a UK household census. It includes a range of factors that provide information about the socioeconomic and demographic traits of people and families. Household identification, individual identification, age, marital status, annual income, gender, accomodation type and highest level of education attained are key variables used in this analysis. To do the analysis various R packages has been used like Tidyverse [@tidyverse] and Ggplot2 [@ggplot2]
+
+# Data
+
+This data set extracted from the UK census data 2021. Census in UK happens after every 10 years and gives the snapshot of all the people and households in UK. Conducted at a national scale, the census served the purpose of informing public policy, resource allocation, and social research by providing a detailed snapshot of the population's characteristics @OfficeForNationalStatistics.
+
+```{r}
+data <- data_1 |>
+    rename(Marital_Status= Mar_Stat, Income = INC, Gender = Female, Accomodation_Type = H8, Ethnicity = Eth, Highest_Education = `Highest Ed`)
+
+data$Accomodation_Type <- factor(data$Accomodation_Type, levels = c(0, 1), labels = c("Self     Contained", "Shared Accomodation"))
+
+  data <- data |>
+  mutate(Gender = ifelse(Gender==1,"Female","Male"))
+```
+
+# Low Income Households and Individuals Insights
+
+The data contains 10565 households. Out of 10,565 , 6730 (63.7%) households have annual income less than 17,000. It is quite alarming figure. To further investigate this, identification of low income individuals by age bracket, ethnicity, gender has been done. 17,700 figure considered to be in low income category has been decided from this source @ethnicity-facts-figures
+
+## Low Income Individuals by Age Group
+
+```{r}
+#| message: FALSE 
+#| warning: FALSE
+#| label: fig-bar-plot
+#| fig-cap: Count of People earning less than £17,700 by Age Group
+#| fig-alt: Count of People earning less than £17,700 by Age Group
+data$Age_Bracket <- cut(data$Age, breaks = c(0,18, 30, 40, 50, 60, Inf), labels = c("0-18","19-30", "31-40", "41-50", "51-60", "60+"))
+low_income_data <- data |>
+    filter(Income < 17700)
+ggplot(low_income_data, aes(x = Age_Bracket, fill = Age_Bracket)) +
+  geom_bar() +
+  geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) +
+  ggtitle("Number of People Earning Less Than £17,700 by Age Bracket") +
+  xlab("Age Bracket") +
+  ylab("Count") +
+  scale_fill_manual(values = c("0-18" = "lightblue", "19-30" = "lightblue", "31-40" = "lightblue", "41-50" = "lightblue", "51-60" = "lightblue", "60+" = "lightblue")) + 
+  theme_minimal()
+```
+
+@fig-bar-plot shows the number of people in each age bracket who are earning less than 24,000. This data can help the government to bring the low income people up and make policies to give more opportunities to help each age bracket. From this results, it is clearly visible people age between 19-30 which is mostly youth are earning very less. After that comes the people age 60+ these are the mostly pensioners who are earning very less due to their age or health conditions. This 2827 count will help the government to make more pensioner schemes.
+
+## Effect of Level of Education attained on Low Income
+
+```{r}
+#| message: FALSE 
+#| warning: FALSE
+#| label: fig-pie-chart
+#| fig-cap: Education Level of People Earning less than £17,700
+#| fig-alt: Percentage of people earning less than 17,700 by education level 
+low_income_data <- data |>
+  filter(Income < 17700)
+education_percentages <- low_income_data |>
+  group_by(Highest_Education) |>
+  summarise(Count = n()) |>
+  mutate(Percentage = (Count / sum(Count)) * 100)
+ggplot(education_percentages, aes(x = "", y = Percentage, fill = factor(Highest_Education))) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar(theta = "y") +
+  ggtitle("Education Levels of People Earning Less Than £17,700 (Percentage)") +
+  theme_void() +
+  theme(legend.position = "right") +
+  geom_text(aes(label = sprintf("%.1f%%", Percentage)), position = position_stack(vjust = 0.5))
+
+```
+
+@fig-pie-chart shows the one of the reason behind the low income individuals. It might be because of their education level. As the pie chart above shows that 36.3% people attended less than secondary school and went for low paying jobs or might get no opportunity for the jobs. People with bachelors degree or higher are much likely to earn more than £24,000. As, employers are more likely to give high paying jobs to people with some skills and advanced knowledge. In order to overcome this problem, Government should promote the higher education by providing the further assistance to students who attend university. Moreover they also expand the apprenticeships programs and make them more accessible to people of all ages and backgrounds.
+
+## Age Distribution of Married Inviduals by Ethnic Group
+
+```{r}
+#| message: FALSE 
+#| warning: FALSE
+#| label: fig-Box-plot 
+#| fig-cap: Age Distribution of Married Indivduals by Ethnic Group 
+#| fig-alt: Box-plot of Age Distribution of Married people by Ethnic Group 
+data |>
+  filter(Marital_Status == "married") |>
+ggplot(aes(x = Ethnicity, y = Age, fill = Ethnicity)) +
+    geom_boxplot() +
+    ggtitle("Age Distribution of Married Individuals by Ethnic Group") +
+    xlab("Ethnic Group") +
+    ylab("Age") +
+    theme_minimal()
+```
+
+Although, from @fig-Box-plot Asian community seems less educated and earning less income, still the median age of married people in the asian community is lower than the median age of married people in any other asian community. Moreover the @fig-bar-plot reflects that young people likely to be in low income category, despite the fact there seems to be more young married people in asian ethnicity. However, the age distribution says that median age of white people is around 45. From @fig-bar-plot it has also been analysed that people age between 41-50 are earning more than any other age bracket. It concludes that married white people are more likely stable than married asian people.
+
+## Income Variation by Ethnicity, Gender & Accomodation type of each Ethnic Group
+
+```{r}
+#| message: FALSE 
+#| warning: FALSE
+#| label: fig-plots
+#| fig-cap: "Plots" 
+#| fig-subcap:
+#|   - "Income Variation by Ethnicity and Gender"
+#|   - "Accomodation Type by Ethnicity" 
+#| layout-ncol: 2
+
+income_summary <- data |>
+   group_by(Ethnicity, Gender) |>
+   summarise(Avg_Income = mean(Income, na.rm = TRUE))
+
+ggplot(income_summary, aes(x = Gender, y = Ethnicity, fill = Avg_Income)) +
+       geom_tile(color = "white") +
+      ggtitle("Income Disparities by Ethnicity and Gender") +
+      #lab("Gender (0 = Male, 1 = Female)") +
+      ylab("Ethnicity, Education") +
+      scale_fill_gradient(low = "lightblue", high = "red") +
+      scale_color_colorblind() +
+      theme_minimal()
+
+ggplot(data, aes(Ethnicity)) +
+      geom_bar(aes(fill=Accomodation_Type), width = 0.5) + 
+      theme(axis.text.x = element_text(angle=65, vjust=0.6)) + 
+      labs(title="People Living in Shared Accomodation by Ethnicity")
+```
+
+@fig-plots reflects the average income of each ethnicity and gender. It shows that **White and Hispanic male** are earning more than any other ethnicity. However, female in every ethnicity are like to earn less than male. To overcome this discrimination, Government should emphasize the employers to do gender balance in their organizations and make opportunities for females by introducing female oriented job schemes.\
+Moreover, the @fig-plots reflects that Asian community are earning very low (less than 20,000) it might be the reason only this ethnicity living in shared accommodation because they can't afford the self contained properties.
+
+## Count of Households with Individuals Aged over 60 by Marital Status
+
+```{r}
+#| message: FALSE 
+#| warning: FALSE
+#| label: fig-bar-chart
+#| fig-cap: Count of Households with people age over 60 and their marital status 
+#| fig-alt: Count of Households with people age over 60 and their marital status
+households_over_60 <- data |>
+     filter(Age > 60) |>
+     group_by(ID, Marital_Status) |>
+     summarise(Frequency = n())
+ggplot(households_over_60, aes(x = Marital_Status, fill = Marital_Status)) +
+      geom_bar() +
+      geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) +
+      ggtitle("Count of Households with Individuals Aged Over 60 by Marital Status") +
+      xlab("Marital Status") +
+      ylab("Number of Households") +
+      theme_minimal()
+```
+
+From the above @fig-bar-chart , the number of households has been calculated where people is over 60 and their marital status. It shows that 1456 households has married old age people. there are few number of households with separated , never married and divorced people. This graph could help Government to analyse which households or number of households need career assistant. So old aged people who are living alone might get help from this data.
+
+# Conclusion
+
+This analysis provided insights into the demographic and socioeconomic traits of people in the UK in 2021. It highlighted several key findings, including:
+
+-   A significant portion of the population (63.7%) has an annual income less than £17,700.
+
+-   Low-income individuals are more likely to be young (19-30) or old (60+).
+
+-   Educational attainment is a significant factor in determining income levels, with those with less than a secondary education being more likely to be in low-income households.
+
+-   Income disparities exist between ethnicities and genders, with White and Hispanic males earning more than other groups.
+
+-   Asian individuals are more likely to live in shared accommodation, potentially due to lower income levels.
+
+-   A considerable number of households (1456) have individuals aged over 60 who are married.
+
+These findings suggest that there is a need for policies and interventions to address low income, educational disparities, and income inequalities. Additionally, support systems for older individuals living alone should be considered. By addressing these issues, the UK can work towards a more equitable and just society for all.
